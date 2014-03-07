@@ -1,0 +1,31 @@
+.link {
+  stroke:black;
+  stroke-width: 5px;
+  stroke-opacity:1;
+}
+
+.task {
+  stroke:red;
+  stroke-width:5;
+  stroke-opacity:0.9;
+  fill:white;
+}
+.task.shadow {
+  stroke:black;
+  stroke-width:5;
+  stroke-opacity:0.3;
+  fill:gray;
+}
+
+.task.title {
+   font-family: 'Patrick Hand SC', cursive;
+}
+
+.task.body {
+    font-family: 'Annie Use Your Telescope', cursive;
+}
+
+.highlight {
+    font-weight: bold;
+    background: gray;
+}

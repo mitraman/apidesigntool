@@ -1,0 +1,14 @@
+[
+{
+  "name" : "Age",
+  "description" : "conveys the sender's estimate of the amount of time since the response (or its revalidation) was generated at the origin server."
+},
+{
+  "name" : "Allow",
+  "description" : "lists the set of methods supported by the resource identified by the Request-URI."
+},
+{
+  "name" : "Expires",
+  "description" : "gives the date/time after which the response is considered stale."
+}
+]
