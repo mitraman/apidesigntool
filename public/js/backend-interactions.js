@@ -81,3 +81,16 @@ function deleteNodeOnServer(node, callback) {
     
     writeTaskAJAX.done(callback);
 }
+
+function retrieveALPSProfiles( callback ) {    
+    $.getJSON('/ALPS/profiles', function (data, textStatus, jqXHR) {
+        if (jqXHR.status === 200) {
+            
+            $.each(data, function (index, profile) {
+                profiles.push(profile);                
+            });        
+            
+            callback();
+        }
+    });
+}

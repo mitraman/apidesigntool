@@ -20,6 +20,7 @@ app.get('/', function(req, res){
 
 var relsUrl = '/rels'
 
+	// WHat is this?
 app.put(relsUrl, function(req, res) {
     
     var source = req.body.rel.source;
@@ -30,8 +31,6 @@ app.put(relsUrl, function(req, res) {
     
     res.send('done');
 })
-
-var taskUrl = '/tasks';
 
 app.get('/tasks/:id', function(req, res) {
     
@@ -131,11 +130,39 @@ app.delete('/tasks/:id', function(req,res) {
 	
 	conn.collection('tasks').remove({_id: conn.ObjectID.createFromHexString(req.params.id)}, function (err, task) {
        res.send('gone.');       
-    });
-	
-	
-    
+    });	   
 })
+
+// get a list of ALPS profiles
+app.get('/ALPS/profiles', function(req, res) {
+	conn.collection('alps').find().toArray(function (err, profiles) {
+	       	res.send(profiles);	       
+	 });
+});
+	
+// create a new ALPS profile	
+app.post('/ALPS/profiles', function(req, res) {
+	var profile = req.body.profile;
+	var name = profile.name;
+	var doc = profile.doc;
+	
+	conn.collection('alps').insert(profile, function (err, post) {
+        console.log('Error: ' + err);
+        console.log('Post:' + post);
+        
+        // TODO: return the new profile id
+        if( err === null ) {
+        	var id = post._id;
+        	res.send(id);       
+        } else {
+        	res.status(500);
+        	res.send(err);
+        }
+        
+         
+        });    
+});
+
 
 function formatCollection(collection, callback) {
 	//console.log(collection);

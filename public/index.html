@@ -109,22 +109,44 @@
 <div class="navbar">
   <div class="navbar-inner">
     <a class="brand" href="#">API Prototype Design Tool</a>
-    <ul class="nav">
-      <li class="active"><a href="#">Home</a></li>
-      <li><a href="#">Import</a></li>
+    <ul id="topnav" class="nav">
+      <li><a class="active" href="#" id="Editor">Editor</a></li>
+      <li><a href="#" id="ALPS">ALPS</a></li>
       <li><a href="#">Export</a></li>
     </ul>
     
   </div>
 </div>
 
+    
+<div id="ALPS-pane" class="container-fluid">
+    <div class="row-fluid">
+        <div id="profile-selector" class="span3">            
+            <div>
+            <button class="btn btn-primary">Import profile...</button>
+            </div>
+            <div>
+            <h3>ALPS Profiles</h3>
+            <select id="profile-list" size="5">
+            </select>
+            </div>
+        </div>
+        <div id="profile-editor" class="span9">
+            <input id="profile-name" type="text">
+            <button class="btn btn-primary disabled">Save</button>
+            <div id="ALPS-editor"></div>
+            
+        </div>
+    </div>
+</div>
+    
 
 <div id="property-editor" class="container-fluid">  	
 	<div class="row-fluid">		
 		<div id="edit-tabs" class="span4">
 			<div class="row-fluid">
 				<div class="dropdown span8">
-					<select id="select_resource" name="select_resource" data-placeholder="Choose a Resource..." class="chzn-select" style="width: 350px;">
+					<select id="select_resource" name="select_resource" data-placeholder="Choose a [state]..." class="chzn-select" style="width: 350px;">
           			</select>  					
 				</div>
 				<div class="span4">
@@ -139,33 +161,37 @@
 				
 			</div>
 			<ul class="nav nav-tabs">
-  				<li class="active">
-    				<a href="#properties" data-toggle="tab">Properties</a>
-  				</li>
+  				<li class="active"><a href="#transition" data-toggle="tab">Transition</a></li>
   				<li><a href="#headers" data-toggle="tab">Headers</a></li>
-  				<li><a href="#response" data-toggle="tab">Response</a></li>
+  				<li><a href="#response" data-toggle="tab">Body</a></li>
   				
-  				<!-- 
+  				
   				<li><button class="btn btn-primary" type="button" id="saveResponseData">Apply</button></li>  				
+                <!--
   				<li><button class="btn btn-primary" type="button" id="deleteTask" disabled="disabled">Delete</button></li>
   				-->
 			</ul>
 			
 			<div class="tab-content">
-				<div class="tab-pane active" id="properties">
+				<div class="tab-pane active" id="transition">
+                <div>How will your users reach this [state?]</div>
 				<form>
   					<fieldset>    					
   					
-    					<input id="name" type="text" placeholder="The name of this state">
-    					<!-- <span class="help-block">Example block-level help text here.</span> -->
+    					<input id="name" type="text" placeholder="The name of this [state]">
+    					<!-- <span class="help-block">Example block-level help text here.</span>  -->
     					
     					<p/>
     					<input id="uri" type="text" placeholder="/someUri">
     					<!-- <span class="help-block">Example block-level help text here.</span> -->
     					
     					<p/>
+                        
+                        <!--
     					<textarea id="description" rows="3" placeholder="description of task/node"></textarea>
+                         -->
     					<!-- <span class="help-block">Example block-level help text here.</span> -->
+                        
     					
     					<p/>
     					<div id="get-toggle" class="switch switch-small" data-on-label="GET" data-off-label="GET">
@@ -218,6 +244,7 @@
 </div>
 
 <div id="type-ahead"><span class="type-ahead-list" size="5" id="type-ahead-list"></span></div>
+<div id="ALPS-type-ahead"><span class="ALPS-type-ahead-list" size="5" id="ALPS-type-ahead-list"></span></div>
 
 <div id="create-node" class="modal hide fade">
 	<div class="modal-header">
