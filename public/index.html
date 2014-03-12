@@ -12,38 +12,11 @@
     <link href="css/typeahead.css" rel="stylesheet">
 <style>
 
-.link {
-  stroke:black;
-  stroke-width: 5px;
-  stroke-opacity:1;
-}
-
-.task {
-  stroke:red;
-  stroke-width:5;
-  stroke-opacity:0.9;
-  fill:white;
-}
-
 .first-task {
   stroke:green;
   stroke-width:5;
   stroke-opacity:0.9;
   fill:white;
-}
-
-.orphan-task {
-  stroke:gray;
-  stroke-width:5;
-  stroke-opacity:0.9;
-  fill:white;
-}
-
-.task.shadow {
-  stroke:black;
-  stroke-width:5;
-  stroke-opacity:0.3;
-  fill:gray;
 }
 
 .task.title {
@@ -102,7 +75,7 @@
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.1/jquery-ui.min.js"></script>
 <script src="http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js"></script>   
 <script src="js/bootstrap.js"></script>
-<script src="js/d3.v3.min.js"></script>
+<script src="js/d3.min.js"></script>
 
 
 <!-- Modal Window for Task Creation-->
@@ -110,6 +83,11 @@
   <div class="navbar-inner">
     <a class="brand" href="#">API Prototype Design Tool</a>
     <ul id="topnav" class="nav">
+        <li class="dropdown"><a href="#" data-toggle="dropdown" class="dropdown-toggle">Project Name</a>
+            <ul class="dropdown-menu">
+                <li>Switch Projects...</li>
+            </ul>
+        </li>
       <li><a class="active" href="#" id="Editor">Editor</a></li>
       <li><a href="#" id="ALPS">ALPS</a></li>
       <li><a href="#">Export</a></li>
@@ -143,7 +121,7 @@
 
 <div id="property-editor" class="container-fluid">  	
 	<div class="row-fluid">		
-		<div id="edit-tabs" class="span4">
+		<div id="edit-tabs" class="span6">
 			<div class="row-fluid">
 				<div class="dropdown span8">
 					<select id="select_resource" name="select_resource" data-placeholder="Choose a [state]..." class="chzn-select" style="width: 350px;">
@@ -185,14 +163,15 @@
     					<input id="uri" type="text" placeholder="/someUri">
     					<!-- <span class="help-block">Example block-level help text here.</span> -->
     					
-    					<p/>
+    					
                         
                         <!--
     					<textarea id="description" rows="3" placeholder="description of task/node"></textarea>
                          -->
     					<!-- <span class="help-block">Example block-level help text here.</span> -->
                         
-    					
+    					<!--
+                        comment this out until we figure out what is going wrong with it.
     					<p/>
     					<div id="get-toggle" class="switch switch-small" data-on-label="GET" data-off-label="GET">
     						<input id="checkbox_get" type="checkbox">
@@ -209,7 +188,20 @@
 						<div id="delete-toggle" class="switch switch-small" data-on-label="DELETE" data-off-label="DELETE">
     						<input id="checkbox_delete" type="checkbox">
 						</div>
-						<p/>    					
+						<p/>
+                        -->
+                        <div id="methods">
+                        <p/>
+                        GET <input id="checkbox_GET" type="checkbox" value="GET">
+                        <p/>
+                        PUT <input id="checkbox_PUT" type="checkbox" value="PUT">
+                        <p/>
+                        POST <input id="checkbox_POST" type="checkbox" value="POST">
+                        <p/>
+                        PATCH <input id="checkbox_PATCH" type="checkbox" value="PATCH">
+                        <p/>
+                        DELETE <input id="checkbox_DELETE" type="checkbox" value="DELETE">
+                        </div>
   					</fieldset>
 				</form>
 				</div>
@@ -238,7 +230,7 @@
 			</div>
 			  
 		</div>		
-    	<div id="canvas" class="span5"></div>    
+    	<div id="canvas" class="span6"></div>    
 
   	</div>    
 </div>
@@ -291,8 +283,9 @@
 <script src="js/bootstrap-switch/bootstrap-switch.min.js"></script>
 <script src="js/bootstrap-chosen/chosen.jquery.min.js"></script>
 
+<!-- <script src="js/alps.js"></script> -->
+<script src="js/graph.js"></script> 
 <script src="js/backend-interactions.js"></script>
-<script src="js/graph.js"></script>
 <script src="js/frontend.js"></script>
 
 </body>

@@ -1,154 +1,212 @@
-// Width and height of the viewport
-var width = 1200;
-var height = 800;
+// ************************************************************************
+// ** graph.js
+// ** 
+// ** data structures, functions and variables related to the node graph 
+// ** and D3 drawing and animation
+// ************************************************************************
 
-var forceGraphNodes = [];
-var forceGraphLinks = [];
-var orphanNodes = [];
+// The master node list.  This should contain a list of response states.
+var graph = { nodes: [] } 
 
-function rebuildForceNodeList() {
-	
-	// Rebuild the node and link arrays
-	forceGraphNodes = [];
-	forceGraphLinks = [];
-	orphanNodes = [];
-	
-	// Divide nodes into orphans and linked  
-	$.each(nodes, function(index, node) {      
-     	// only add this to our force graph if a relationship exists
-     	if( $.grep(relationships, function(rel){ return (node.nodeId === rel.source || node.nodeId === rel.target); }).length > 0 ) {
-     		forceGraphNodes.push(node);
-     	}
-     	else {
-     		orphanNodes.push(node);  
-     	} 
-     });
-          
-	// Build a link array based on the nodes that are connected
-	$.each(forceGraphNodes, function(i, node) {
-		$.each(node.links, function( linkIndex, targetNodeId ) {			
-			// Find the index of the target node
-			var targetNodes = $.grep(linkedNodes, function(e){ return e.nodeId === targetNodeId; });
-			if( targetNodes.length > 0 ) {
-				forceGraphLinks.push({source: i, target : targetNodes[0].index});
-			}
-		});
-	});     	
-}
+// Internal represntations of the node lists used for the D3 graph
+var linkedNodes = [];
 
-// redraw the force graph and orphan nodes
-function drawNodes() {
+// the links array indicates the rels between node array locations.  D3 doesn't support arbitrary indexes for force layouts,
+// so we need to maintain this array indexed version of the links in addition to the links in our nodes list.
+// Any operations made to the node lists need to update this as well.
+var links = [];
 
-// Dimensions of the shapes
-var rect_width = 200;
-var rect_height = 40;
-var link_x = rect_width / 2;
-var link_y = rect_height / 2;
+var canvasWidth = $( "#canvas" ).width();
+var height = $( window ).height();
 
-	         
-// Render orphaned nodes in the orphan pool area
-svg.selectAll("g.orphan").remove();
-var orphans = svg.selectAll("g.orphan").data(orphanNodes).enter().append("g")
-	.on("click",function(d,i) {		
-        selectNode(orphanNodes[i]); 
-    })
-    .attr("transform", function(d) { return "translate(" + (rect_width + 20) * (d.index) + ",20)"; });    
+// Create the initial D3 object by appending an SVG element to the canvas
+var graphSVG = d3.select("#canvas")
+        .append("svg")
+        .attr("width", canvasWidth)
+        .attr("height", height);
 
-console.log('orphans:');    
-console.log(orphans);
-   
-orphans.append("rect")
-	//.attr("x", function(d) { if( d.index > 1 ) { return (rect_width + 20) * (d.index-1); } else {return rect_width * (d.index-1);} })
-	//.attr("y", function(d) { return 25 })
-    .attr("width", rect_width)
-    .attr("height", rect_height)
-    .attr("rx", 10)
-    .attr("ry", 10)
-    .attr("class", "orphan-task");
-
-orphans.append("text")
-      .attr("dy", ".3em")
-      .attr("y", 20)
-      .attr("x", 10)
-      .attr("class", "task.title")      
-      .attr("style", "font-family: 'font-family: 'Architects Daughter', cursive;")
-      .text(function(d, i) {return d.title});
-
-     
-  // Create a force layout object
+// TODO: determine correct values for height and width
 var force = d3.layout.force()
-    .nodes(linkedNodes)
-    .links(links)
-    .gravity(0.1)
-    .charge(-2000)
-    .linkDistance(200)
-    .size([width, height])
-    .start();
+        .nodes(linkedNodes)
+        .links(links)
+        .size([canvasWidth, height])
+        .on("tick", tick)
+        .start();
 
-link = link.data(force.links(), function(d) {return d.id;});
-link.enter().append("line").attr("class", "link");
-link.exit().remove();
-
-node = node.data(force.nodes(), function(d) {return d.id;});
-
-var timerId;
-
-// Call the edit node modal if the user clicks on a rectangle
-// TODO: populate the fields appropriately
-node.exit().remove();
-var nodeEnter = node.enter().append("g").call(force.drag)
-    .on("click",function(d,i) {
-        selectNode(linkedNodes[i]); 
-    })
-    .on("mouseover", function(d,i) {
-        timerId = setTimeout(function() {
-            // TODO: Create a popup window that describes the node's main features
-            
-        }, 1000);
-    });
-
-
-
-//TODO: Set the colour of the rectangle according to some meta-info (like method or connections)
-nodeEnter.append("rect")
-    .attr("width", rect_width).attr("height", rect_height).attr("rx", 10).attr("ry", 10).attr("class", function(d) { if (d.index > 0) return "task"; else return "first-task"; });
-    
-// TODO: center the text manually as most browsers don't support text alignment for SVG
-nodeEnter.append("text")
-      .attr("dy", ".3em")
-      .attr("y", 20)
-      .attr("x", 10)
-      .attr("class", "task.title")      
-      .attr("style", "font-family: 'font-family: 'Architects Daughter', cursive;")
-      .text(function(d, i) {return d.title});
-     
-node.exit().remove();
-
-      
-
-// animation function
-force.on("tick", function() {    
-    link.attr("x1", function(d) { if( d.source.x === NaN ) return; return d.source.x + link_x;})
-        .attr("y1", function(d) { return d.source.y + link_y; })
-        .attr("x2", function(d) { return d.target.x + link_x; })
-        .attr("y2", function(d) { return d.target.y + link_y; });
-
-        // Use translation to place the elements within the box
-        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+// Allow the user to drag a force layout node into a fixed position
+var drag = force.drag()
+    .on("dragstart", dragstart);
         
-});
-
+function dblclick(d) {
+    d3.select(this).classed("fixed", d.fixed = false);
 }
 
-$('#removeNode').click(function() {	
-   deleteNodeOnServer(activeNode, function() {
-   		console.log('delete completed.');
-   		
-   		// Remove the node from the list
-   		var nodeMatches = $.grep(nodes, function(node){ return node.nodeId === activeNode.nodeId });
-   		console.log(node);
-   		nodes.splice(nodeMatches[0].index, 1);
-   		drawNodes();
-   });   
-});
+function dragstart(d) {
+    d3.select(this).classed("fixed", d.fixed = true);
+}
 
+    
+// The main routine - updates/renders the graph visualization.  
+// This should be called anytime the underlying node lists change, including for the first render
+function renderGraph() {
+    
+    if( force === null ) {
+            throw Error("force layout has not been defined.");
+        }
+        
+        var orphanMap = [];
+        var linkedMap = [];
+        
+        //**** Filter the nodes into maps of orphans and linked nodes
+        // TODO: profile this with a resaonable sized list and see how bad the performance is.
+        
+        for( var key in graph.nodes ) {
+            var node = graph.nodes[key];           
+                        
+            // If this node has no links, store it in the orphan map, otherwise
+            // store it in the nodes with links map
+            if( !linkedMap.hasOwnProperty(node.nodeId) ) {
+                if( node.links.length == 0 ){ orphanMap[node.nodeId] = node; }
+                else { linkedMap[node.nodeId] = node; }
+            }
+            
+            // if this node is linked to another node, put all link targets in the 
+            // map of nodes with links and remove them from the orphan map (if necessary).
+            for( var index in node.links ) {
+                var target = node.links[index];
+            
+                if( orphanMap.hasOwnProperty(target) ) { 
+                    delete orphanMap[target];
+                }
+                if( !linkedMap.hasOwnProperty(target) ) {
+            
+                    if( graph.nodes[target] === undefined ) {
+                        // TODO: What should the behaviour be if a target node doesn't actually exist?
+                        throw new Error("Node " + node.nodeId + " is linked to non-existent target node " + target );
+                    }
+                    linkedMap[target] = graph.nodes[target];
+                }
+            }
+        }
+        
+        // Turn the maps into lists that can be used with d3
+        var orphanNodes = [];
+        
+        for( var key in orphanMap ) {
+            orphanNodes.push(orphanMap[key]);
+        }
+        
+        linkedNodes = [];
+        var linkedNodesIndex = {};
+        for( var key in linkedMap ) {       
+            
+            var linkedNode = linkedMap[key];
+            
+            linkedNodes.push(linkedNode);
+            // maintain a map of key->index so that we can easily build the list of links later
+            linkedNodesIndex[linkedNode.nodeId] = linkedNodes.length - 1;            
+        }
+                
+        
+        // Construct the links array
+        links = [];
+        for( var i = 0; i < linkedNodes.length; i++ ) {
+            var node = linkedNodes[i];
+            if( node.links.length > 0 ) {
+                for ( var j = 0; j < node.links.length; j++ ) {
+                    var link = node.links[j];
+                    var source = i;
+                    var target = linkedNodesIndex[link];
+                    links.push({source: source, target: target});                    
+                }
+            }
+        }
+        
+        
+        //****** End of filtering
+                
+        
+        /*** 
+          Update the boxes for the orphaned nodes
+          ***/
+    console.log("lists:");
+    console.log(orphanNodes);    
+    console.log(linkedNodes);
+    console.log(links);
+    
+        // Join the graphNodes object to the orphan list and create a "g" element when a node is added
+        var graphNodes = graphSVG
+        .selectAll("g")
+        .data(orphanNodes, function(d) { return d.nodeId })
+            .enter()
+        .append("g")
+        .on("click", function (d, i) {
+            selectNode(graph.nodes[d.nodeId]);
+        });
+        
+        // Remove a "g" element when a node is removed.
+        graphSVG.selectAll("g")
+            .data(orphanNodes, function(d) { return d.nodeId })
+            .exit()
+            .remove("g");
+
+        // populate the SVG group with the node detail
+        graphNodes
+        .append("circle")
+        .attr("cx", function( d, i ) { return (i * 100) + 100; } )
+        .attr("cy", 100)
+        .attr("r","45")      
+        .attr("class", "orphan");
+        
+        graphNodes
+            .append("text")
+            .text(function(d) { return d.title; } )
+            .attr("x", function( d, i ) { return (i*100) + 75; } )
+            .attr("y", 100);
+        
+        /***
+            Update the force graph for linked nodes
+            ***/        
+        
+        // Restart the force layout.
+        force
+        .nodes(linkedNodes)
+        .links(links)
+        .start();       
+        
+        var link = graphSVG.selectAll(".link")
+            .data(links)
+            .enter().append("line")
+            .attr("class", "link");            
+                
+        var nodeGroup = graphSVG.selectAll(".node")
+            .data(linkedNodes, function(d) { return d.nodeId })
+            .enter().append("g")
+            .attr("transform", function( d, i ) {
+                return "translate(" + d.x + "," + d.y + ")";
+            })
+            .call(force.drag)
+            .attr("class", "node");
+        
+        nodeGroup
+            .append("circle")
+            .attr("r","45");
+        
+        nodeGroup
+            .append("text")
+            .text(function( d ) { return d.title; });
+            
+}
+
+function tick(e) {        
+    graphSVG.selectAll(".link")
+            .attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+
+        graphSVG.selectAll(".node")
+            .attr("transform", function( d, i ) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });            
+}

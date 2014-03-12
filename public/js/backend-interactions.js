@@ -1,9 +1,14 @@
 // ****
 // Interactions with the Backend
 
-function createNodeOnServer(title, description, url, method, repsonseData, links, callback) {
-     
-     var taskContainer = { task : { title : title, description : description, url : url, method : method, response : repsonseData, links : links} };
+function createNodeOnServer(title, description, url, methods, responseData, links, callback) {
+         
+     var taskContainer = { task : { title : title, 
+                                   description : description, 
+                                   url : url, 
+                                   methods : methods, 
+                                   response : responseData, 
+                                   links : links } };
      console.log(taskContainer);
    //Write task to the server   
    var writeTaskAJAX = $.ajax({
@@ -19,8 +24,18 @@ function createNodeOnServer(title, description, url, method, repsonseData, links
         	console.log('success!');
         	console.log(data);
             var nodeId = data[0]._id;
-
-            nodes.push({nodeId : nodeId, title : node.title, uri : node.uri, description : node.description, responseData: node.responseData});
+                        
+            var node = {
+                nodeId: nodeId,
+                title: title,
+                description: description,
+                uri: url,
+                methods : methods,
+                responseData: responseData,
+                links: links
+               };            
+               
+            graph.nodes[nodeId] = node;
             
             if( callback != null ) {
             	callback(nodeId);
@@ -39,7 +54,7 @@ function updateNodeOnServer(node, callback) {
    console.log(node);
    //Write node to the server   
    
-   var taskContainer = { task : { title : node.title, description : node.description, url : node.uri, method : node.method, response : node.responseData, links : node.links} };
+   var taskContainer = { task : { title : node.title, description : node.description, url : node.uri, methods : node.methods, response : node.responseData, links : node.links} };
    console.log(taskContainer);
    
    var PUTurl = "/tasks/" + node.nodeId;
@@ -69,27 +84,40 @@ function updateNodeOnServer(node, callback) {
 
 function deleteNodeOnServer(node, callback) {
  
- 	console.log('deleting...');
    var DELETEurl = "/tasks/" + node.nodeId;
    
-   var writeTaskAJAX = $.ajax({
+   $.ajax({
         url: DELETEurl,
         type: 'DELETE',
         contentType: 'application/json',
-        dataType: 'json'
+        dataType: 'json',
+       timeout: 100
+    })
+    .done(function( data, textStatus, jqXHR ) {
+        callback();
+    })
+   .fail(function( jqXHR, textStatus, errorThrown ) {
+        console.log("DELETE call failed.");
+       console.log(textStatus);
+       console.log(errorThrown);
     });
-    
-    writeTaskAJAX.done(callback);
+       
 }
 
 function retrieveALPSProfiles( callback ) {    
+    console.log("retrieveALPSProfiles");
     $.getJSON('/ALPS/profiles', function (data, textStatus, jqXHR) {
         if (jqXHR.status === 200) {
             
             $.each(data, function (index, profile) {
                 profiles.push(profile);                
+                // parse the profile
+                /*
+                readJSON(profile.doc, function(err) {
+                    console.log('finished parsing');                    
+                });
+                */
             });        
-            
             callback();
         }
     });

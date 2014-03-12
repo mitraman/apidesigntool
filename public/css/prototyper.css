@@ -4,19 +4,6 @@
   stroke-opacity:1;
 }
 
-.task {
-  stroke:red;
-  stroke-width:5;
-  stroke-opacity:0.9;
-  fill:white;
-}
-.task.shadow {
-  stroke:black;
-  stroke-width:5;
-  stroke-opacity:0.3;
-  fill:gray;
-}
-
 .task.title {
    font-family: 'Patrick Hand SC', cursive;
 }
@@ -28,4 +15,22 @@
 .highlight {
     font-weight: bold;
     background: gray;
+}
+
+.orphan {
+    stroke: black;
+    stroke-width: 5;
+    fill:white;
+}
+
+.node {
+    stroke: black;
+    stroke-width: 5;
+    fill:white;
+}
+
+.node text {
+    stroke-width: 1;
+    stroke: black;
+    
 }

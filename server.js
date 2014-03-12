@@ -50,11 +50,15 @@ app.get('/tasks/:id', function(req, res) {
 app.get('/tasks', function(req, res) {
   
    conn.collection('tasks').find().toArray(function (err, tasks) {
-       //TODO: Translate this object into a canonical form appropriate for our API
-       formatCollection( tasks, function (error, formattedResponse) {
-       	res.send(formattedResponse);
-       });       
-    });
+	   if( err ) {
+		   res.status(500);
+		   res.send("Unable to retrieve data.");
+	   }else {
+		   formatCollection( tasks, function (error, formattedResponse) {
+			   res.send(formattedResponse);
+		   });    
+	   }
+    });   
    
 });
 
@@ -68,6 +72,7 @@ app.put('/tasks/:id', function(req, res) {
     var title = task.title;
     var description = task.description;    
     var responseData = task.response;
+    var methods = task.methods;
     var links = task.links;
     var url = task.url;    
     var id = req.params.id;
@@ -80,6 +85,9 @@ app.put('/tasks/:id', function(req, res) {
         
         	res.send(post);        
     });
+	
+	// Update the mock listeners
+	registerMockListeners();
 	
 });
 
@@ -95,6 +103,7 @@ app.post('/tasks', function(req, res){
     var links = task.links;
     var url = task.url;
     var id = task.nodeId;
+    var methods = task.methods;
     
     console.log(id);
     // Store object in database
@@ -107,6 +116,7 @@ app.post('/tasks', function(req, res){
         res.send(post);        
         });    
     }else {
+    	// TODO: What is this all about?
         conn.collection('tasks').updateById(conn.ObjectID.createFromHexString(id), task, function (err, post) {
             console.log('Error: ' + err);
         console.log('Post:' + post);
@@ -116,7 +126,7 @@ app.post('/tasks', function(req, res){
         });    
     }
     
-    
+    registerMockListeners();
     
        
 });
@@ -129,7 +139,7 @@ app.delete('/tasks/:id', function(req,res) {
 	var id = req.params.id;
 	
 	conn.collection('tasks').remove({_id: conn.ObjectID.createFromHexString(req.params.id)}, function (err, task) {
-       res.send('gone.');       
+       res.send('{ "status" : "deleted" }');       
     });	   
 })
 
@@ -163,6 +173,57 @@ app.post('/ALPS/profiles', function(req, res) {
         });    
 });
 
+var mockListeners = {};
+
+// setup the backend API based on the state and transitions that have been defined
+function registerMockListeners() {
+	
+	console.log('loading listeners');
+	mockListeners = {};
+	
+	conn.collection('tasks').find().toArray(function (err, tasks) {
+		for( taskIndex in tasks) {			
+			var task = tasks[taskIndex];
+			
+			if( task.url != null && task.url != "" ) {
+				mockListeners[task.url] = {
+						title : task.title,
+						response : task.response,			
+						methods : task.methods
+				}
+			}
+		}
+		
+	});
+	
+}
+
+// use our mock listeners to handle any remaining requests 
+app.all('*', function(req, res) {
+		
+	var subdomain = req.host.split(".")[0];
+	console.log(subdomain);
+	
+	if( mockListeners[req.path] != null) {				
+		var listener = mockListeners[req.path];
+		
+		console.log(listener);
+		
+		if( listener.methods.indexOf(req.method) < 0 ) {		
+			// TODO: Allow the user to customize the error message and headers
+			res.status(405);
+			res.set('Allow',listener.methods);
+			res.send("this method is not supported.");
+		}else {
+			res.send(listener.response);	
+		}		
+	}else {
+		res.status(404);
+		res.send('no listener found.');
+	}
+		
+	
+});
 
 function formatCollection(collection, callback) {
 	//console.log(collection);
@@ -171,6 +232,8 @@ function formatCollection(collection, callback) {
 	var err = null;
 	callback(err, formattedResponse);
 }
+
+registerMockListeners();
 
 var port = 8080;
 app.listen(port);
