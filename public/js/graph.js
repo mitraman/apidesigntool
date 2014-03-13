@@ -30,6 +30,7 @@ var force = d3.layout.force()
         .nodes(linkedNodes)
         .links(links)
         .size([canvasWidth, height])
+        .linkDistance(100)
         .on("tick", tick)
         .start();
 
@@ -129,10 +130,10 @@ function renderGraph() {
         /*** 
           Update the boxes for the orphaned nodes
           ***/
-    console.log("lists:");
+    /*console.log("lists:");
     console.log(orphanNodes);    
     console.log(linkedNodes);
-    console.log(links);
+    console.log(links);*/
     
         // Join the graphNodes object to the orphan list and create a "g" element when a node is added
         var graphNodes = graphSVG
@@ -150,19 +151,41 @@ function renderGraph() {
             .exit()
             .remove("g");
 
-        // populate the SVG group with the node detail
+        // populate the SVG group with the node detail        
         graphNodes
-        .append("circle")
-        .attr("cx", function( d, i ) { return (i * 100) + 100; } )
-        .attr("cy", 100)
-        .attr("r","45")      
-        .attr("class", "orphan");
+        .append("rect")
+        .attr("width", 100)
+        .attr("height", 30)
+        .attr("x", function( d, i ) { return (i*120) + 75; } )
+        .attr("y", 24)
+        .attr("rx",5)
+        .attr("ry",5)
+        .attr("class", "node-title");
         
         graphNodes
             .append("text")
             .text(function(d) { return d.title; } )
-            .attr("x", function( d, i ) { return (i*100) + 75; } )
-            .attr("y", 100);
+            .attr("x", function( d, i ) { return (i*120) + 80; } )
+            .attr("y", 45);        
+    
+    /*
+        This was originally a circle, but I've decided to remove the circles from orphan nodes.
+        
+        graphNodes
+        .append("circle")
+        .attr("cx", function( d, i ) { return (i * 120) + 125; } )
+        .attr("cy", 15)
+        .attr("r","10")      
+        .attr("class", "orphan");
+    
+        graphNodes
+            .append("circle")
+            .attr("r", "4")
+            .attr("cx", function( d, i ) { return (i * 120) + 125; } )
+            .attr("cy", 15)
+            .attr("style", "stroke-width: 1;fill: white");
+            */
+    
         
         /***
             Update the force graph for linked nodes
@@ -186,24 +209,53 @@ function renderGraph() {
                 return "translate(" + d.x + "," + d.y + ")";
             })
             .call(force.drag)
-            .attr("class", "node");
+            .attr("class", "node")
+            .on("click", function (d, i) {
+                selectNode(graph.nodes[d.nodeId]) });
+        
+        nodeGroup
+            .append("rect")
+            .attr("width", 100)
+            .attr("height", 30)
+            .attr("y", 5)
+            .attr("rx",5)
+            .attr("ry",5)
+            .attr("class", "node-title");
+    
+        // Incoming link circle
+        nodeGroup
+            .append("circle")
+            .attr("r","10");
         
         nodeGroup
             .append("circle")
-            .attr("r","45");
+            .attr("r", "6")
+            .attr("style", "stroke-width: 1");
+    
+        // Outgong link circle
+        nodeGroup
+            .append("circle")
+            .attr("cx", 100)
+            .attr("cy", 32)
+            .attr("r","4");
         
         nodeGroup
             .append("text")
+            .attr("y", 25)
+            .attr("x", 5)
             .text(function( d ) { return d.title; });
             
 }
 
 function tick(e) {        
     graphSVG.selectAll(".link")
-            .attr("x1", function(d) { return d.source.x; })
-            .attr("y1", function(d) { return d.source.y; })
+            .attr("x1", function(d) { return d.source.x + 100; })
+            .attr("y1", function(d) { return d.source.y + 32; })
             .attr("x2", function(d) { return d.target.x; })
             .attr("y2", function(d) { return d.target.y; });
+    
+    /* If the link is a self link we need to do something like: 
+    <path d="M0 0 C-30 90, 100 60, 100 30" stroke="black" fill="transparent"></path> */
 
         graphSVG.selectAll(".node")
             .attr("transform", function( d, i ) {

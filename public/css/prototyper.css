@@ -18,14 +18,14 @@
 }
 
 .orphan {
-    stroke: black;
-    stroke-width: 5;
-    fill:white;
+    stroke: #636363;
+    stroke-width: 3;
+    fill: #D4D4D4;
 }
 
 .node {
     stroke: black;
-    stroke-width: 5;
+    stroke-width: 3;
     fill:white;
 }
 
@@ -34,3 +34,34 @@
     stroke: black;
     
 }
+
+.node-title {
+    stroke: black;
+    stroke-width: 2;
+    fill: #FAECC3;   
+    
+}
+
+.node-title text {
+    fill: "#F6D46E";   
+}
+
+.type-ahead {
+    padding: .05em .05em !important;
+}
+
+.type-ahead-list {
+      font-size: 12px;
+}
+
+.type-ahead-list select {
+   background: transparent;
+   width: 268px;
+   padding: 5px;
+   font-size: 12px;
+   line-height: 1;
+   border: 0;
+   border-radius: 0;
+   height: 34px;
+   -webkit-appearance: none;
+ }

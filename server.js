@@ -153,8 +153,10 @@ app.get('/ALPS/profiles', function(req, res) {
 // create a new ALPS profile	
 app.post('/ALPS/profiles', function(req, res) {
 	var profile = req.body.profile;
+	console.log(profile);
 	var name = profile.name;
 	var doc = profile.doc;
+	var representation = profile.representation;
 	
 	conn.collection('alps').insert(profile, function (err, post) {
         console.log('Error: ' + err);
@@ -172,6 +174,7 @@ app.post('/ALPS/profiles', function(req, res) {
          
         });    
 });
+
 
 var mockListeners = {};
 

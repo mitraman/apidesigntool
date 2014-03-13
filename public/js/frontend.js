@@ -1,5 +1,4 @@
 
-
 var profiles = [];
 var activeNode = null;
 
@@ -34,7 +33,7 @@ $.getJSON('/tasks', function (data, textStatus, jqXHR) {
             graph.nodes[taskObject._id] = node;
         });
         
-        console.log(graph.nodes);
+        //console.log(graph.nodes);
         
         // populate the resource dropdown list
         $('#select_resource').find('option').remove();
@@ -66,7 +65,18 @@ retrieveALPSProfiles(function(error) {
             .append($("<option></option>")
             .attr("value",key) 
             .text(profile.name)); 
+                        
+        // parse the profile and store a list of descriptor names
+        if( profile.representation === 'json'  ) {
+            readJSON(profile.doc, function() {});
+        }else if( profile.representation === 'xml' ) {
+            parseXML(profile.doc, function() {});
+        }else {
+            console.log('UNKNOWN REPRESNETATION FOR ALPS PROFILE');
+        }
+        
     });
+    
 });
 
 // user has selected the ALPS pane
@@ -98,9 +108,45 @@ $("#profile-list").change(function(e) {
     
     // Load the selected profile in the editor
     var doc = profiles[selectedVal].doc;
-    var docStr = JSON.stringify(doc, null, '\t');
-    ALPSEditor.setValue(docStr);
+    //var docStr = JSON.stringify(doc, null, '\t');
+    ALPSEditor.setValue(doc);
     $("#profile-name").val(profiles[selectedVal].name);
+    //todo: set the appropriate rep value
+    
+    
+});
+
+// The content-type of the ALPS doc has changed
+$("#profile-rep").change(function(e) {
+    var contentType = $( "#profile-rep" ).val();
+    console.log(contentType);
+    
+    if( contentType === 'xml' ) {
+        ALPSEditor.getSession().setMode("ace/mode/xml");
+    }else if( contentType === 'json' ) {
+        ALPSEditor.getSession().setMode("ace/mode/json");
+    }
+});
+
+// New alps profile event
+$("#new-profile").click(function(e) {
+    // clear the profile editor window
+    //ALPSEditor.setValue('{ \n    \"alps\": {\n        "version\": \"1.0\" \n    }\n}');
+    ALPSEditor.setValue('');
+    $("#profile-name").val("");        
+});
+
+// save ALPS profile
+$("#profile-save").click(function(e) {
+    //TODO: determine if this is a new profile or an update
+    var name = $("#profile-name").val();
+    var doc = ALPSEditor.getValue();
+    var rep = $("#profile-rep").val();
+    var profile = {name: name, doc: doc, representation: rep };
+    console.log(profile);
+    createALPSProfile(profile, function() {
+    });
+    
     
 });
 
@@ -124,7 +170,7 @@ function selectNode(node) {
 
     disableTypeAhead = true;
     // is this call synchronous?
-    editor.setValue(node.responseData);
+    responseEditor.setValue(node.responseData);
     disableTypeAhead = false;
 
     // Make sure that dropdown points to the selected node
@@ -184,7 +230,7 @@ function newNodeCreated(nodeId) {
     $('#name').val('');
     $('#description').val('');
     $('#uri').val('');
-    editor.getSession().setValue('');
+    responseEditor.getSession().setValue('');
 
     // Redraw the force layout
     renderGraph();
@@ -204,7 +250,7 @@ $('button#saveResponseData').click(function () {
     // Look for links
     // TODO: improve regex to match on the title only without including quotes or dollar signs
     var re = /["][$](?:(?:\\.)|(?:[^"\\]))*?["]/g;
-    var linkTokens = editor.getSession().getValue().match(re);
+    var linkTokens = responseEditor.getSession().getValue().match(re);
 
     console.log("activeNode :" + activeNode);
     
@@ -254,10 +300,11 @@ $('button#saveResponseData').click(function () {
     renderGraph();
 
     // Save data to backend
-    //updateNodeOnServer(activeNode);
+    updateNodeOnServer(activeNode);
 });
 
 // **** RESPONSE EDITOR FUNCTIONS ****
+
 var typeAheadEnabled = false;
 var ALPStypeAheadEnabled = false;
 var tokenStartColumn = 0;
@@ -271,180 +318,17 @@ var disableALPSTypeAhead = false;
 // Set the height of the div for the editor
 var parentHeight = $('#property-editor').parent().height();
 
-// Create the editor
+// Create the response editor
 $('#editor').height(parentHeight);
-var editor = ace.edit("editor");
-editor.setTheme("ace/theme/dawn");
-editor.getSession().setMode("ace/mode/json");
+var responseEditor = ace.edit("editor");
+responseEditor.setTheme("ace/theme/dawn");
+responseEditor.getSession().setMode("ace/mode/json"); 
 
 // Create the ALPS editor
 $("#ALPS-editor").height(parentHeight);
 var ALPSEditor = ace.edit("ALPS-editor");
 ALPSEditor.setTheme("ace/theme/dawn");
-editor.getSession().setMode("ace/mode/json");
-
-// Update editor if type-ahead selection is clicked
-function suggestionClicked(title, token) {
-    // Complete the text based on the selection chosen.
-    console.log(token);
-    var appendText = title.substring(token.length);
-    editor.insert(appendText + "\"");
-    $('#type-ahead').dialog("close");
-
-}
-
-//*** TEMPORARY - TO BE REPLACED BY DYNAMIC ALPS LIST FROM BACKEND
-var alpsDescriptors = {
-    item: {
-        id: 'item'
-    },
-    collection: {
-        id: 'collection'
-    }
-};
-
-//TODO: handle the case where we are loading data instead of typing it?
-// Listen for changes in the response editor 
-editor.on("change", function (e) {
-    
-    if( disableTypeAhead ) { 
-        return;
-    }
-    
-    // update the in-memory object with the change
-    activeNode.responseData = editor.getSession().getValue();
-
-    // TODO: Create a different div class for each type of type-ahead
-
-    // create a type-ahead box if the user enters a letter that matches one of the ALPS vocabularies
-    // we will only create a type-ahead if this is the first character after a non alphanumeric    
-    if (e.data.action === "insertText") {
-        var range = e.data.range.clone();
-        range.start.column--;
-        range.end.column--;
-        var prevChar = editor.getSession().getTextRange(range);
-        // regex check to see if the previous character was a non-alphanumeric
-        if (!prevChar.match(/^[0-9a-z]+$/)) {
-            console.log('I would do a type ahead here!');
-            // TODO: Make this a callable function so I can reuse it for the other typeahead case
-            var coords = editor.renderer.textToScreenCoordinates(range.start.row, range.start.column);
-
-            // TODO: the offset should be based on the font height / screen size
-            var yOffset = 20;
-            $('#type-ahead').dialog({
-                position: [coords.pageX, coords.pageY + yOffset],
-                closeOnEscape: true,
-                draggable: false,
-                resizable: false,
-                dialogClass: "type-ahead"
-            });
-            // Set the focus back on the ace editor pane so the user can continue to type
-            editor.focus();
-
-            ALPStypeAheadEnabled = true;
-            tokenStartColumn = e.data.range.start.column; // ignore the initial link indicator 
-            tokenStartRow = e.data.range.start.row;
-        }
-    }
-
-    if (ALPStypeAheadEnabled) {
-        var selectionRange = e.data.range.clone();
-        selectionRange.start.column = tokenStartColumn;
-        selectionRange.start.row = tokenStartRow;
-        var token = editor.getSession().getTextRange(selectionRange);
-
-        $('#type-ahead-list').find('div').remove();
-
-        var foundMatch = false;
-
-        $.each(alpsDescriptors, function (index, descriptor) {
-            if (descriptor.id.substring(0, token.length) === token) {
-                foundMatch = true;
-                $('#type-ahead-list').append("<div class=\"type-ahead-suggestion\" style=\"white-space: nowrap; cursor: pointer;\"><a onclick=\"suggestionClicked('" + descriptor.id + "', '" + token + "');\" href=\"#\">" + descriptor.id + "</a></div>");
-            }
-        });
-
-        // end the type ahead if there are no matching results
-        // TODO: handle the case where a user hits backspace
-        if (!foundMatch) {
-            $('#type-ahead').dialog("close");
-        }
-
-        // end the type ahead if the user enters a terminating character (non alpha-numeric).
-        if (!e.data.text.match(/^[0-9a-z]+$/)) {
-            $('#type-ahead').dialog("close");
-        }
-        
-        //TODO close the type ahead box if the focus changes.
-        
-        //TODO close the type ahead box if the user hits escape.
-        
-    }
-
-    // ** Type Ahead for Transitions
-    // create a type-ahead box if the user enters these two characters: "$
-    if (e.data.action === "insertText" && e.data.text === "$") {
-        var range = e.data.range.clone();
-        range.start.column--;
-        range.end.column--;
-        var prevChar = editor.getSession().getTextRange(range);
-        if (prevChar === "\"") {
-
-            var coords = editor.renderer.textToScreenCoordinates(range.start.row, range.start.column);
-
-            // TODO: the offset should be based on the font height / screen size
-            var yOffset = 20;
-            $('#type-ahead').dialog({
-                position: [coords.pageX, coords.pageY + yOffset],
-                closeOnEscape: true,
-                draggable: false,
-                resizable: false,
-                dialogClass: "type-ahead"
-            });
-            // Set the focus back on the ace editor pane so the user can continue to type
-            editor.focus();
-
-            typeAheadEnabled = true;
-            tokenStartColumn = e.data.range.start.column + 1; // ignore the initial link indicator 
-            tokenStartRow = e.data.range.start.row;
-        }
-    }
-
-    if (typeAheadEnabled) {
-        var selectionRange = e.data.range.clone();
-        selectionRange.start.column = tokenStartColumn;
-        selectionRange.start.row = tokenStartRow;
-        var token = editor.getSession().getTextRange(selectionRange);
-
-        // populate the type ahead list
-        $('#type-ahead-list').find('div').remove();
-        for( nodeId in graph.nodes ) {
-            var node = graph.nodes[nodeId];
-            if (node.title.substring(0, token.length) === token) {
-                $('#type-ahead-list').append("<div class=\"type-ahead-suggestion\" style=\"white-space: nowrap; cursor: pointer;\"><a onclick=\"suggestionClicked('" + node.title + "', '" + token + "');\" href=\"#\">" + node.title + "</a></div>");
-            }
-        }
-        $('#type-ahead-list').append("<div class=\"type-ahead-suggestion\" style=\"white-space: nowrap; cursor: pointer;\"><a href=\"#\">Create New Task...</a></div>");
-
-        // end the type ahead if the user enters a terminating character (e.g. space or enter).
-        // TODO: catch the escape character
-        if (e.data.text == "\"") {
-            $('#type-ahead').dialog("close");
-        }
-
-        // Make the entire div selectable in the type ahead suggestion list
-        $(".type-ahead-suggestion").click(function () {
-            var aaaaays = $(this).find("a");
-            if (aaaaays.length > 0) {
-                $(this).find("a")[0].onclick();
-            }
-            return false;
-        });
-
-
-
-    }
-});
+ALPSEditor.getSession().setMode("ace/mode/json");
 
 
 // ** Set editor highlighter based on the content-type once the user enters a value
@@ -454,10 +338,10 @@ $('#mime_type').bind('change', function (event) {
     // If we understand the content-type, set the editor accordingly
     if (value.toUpperCase() === 'APPLICATION/JSON') {
         console.log('setting editor to JSON mode');
-        editor.getSession().setMode("ace/mode/json");
+        responseEditor.getSession().setMode("ace/mode/json");
     } else if (value.toUpperCase() === 'APPLICATION/XML' || value.toUpperCase() === 'TEXT/XML') {
         console.log('setting editor to XML mode');
-        editor.getSession().setMode("ace/mode/xml");
+        responseEditor.getSession().setMode("ace/mode/xml");
     }
 });
 
@@ -514,9 +398,6 @@ $('#table_headers').on("keyup click", function (event) {
         $('#table_headers tr:last').after("<td colspan=\"3\"><button class=\"btn btn-primary\" type=\"button\" id=\"addHeader\">Add Header</button></td>");
     }
 });
-
-
-
 
 // Event handler functions
 function propertyChange(event) {

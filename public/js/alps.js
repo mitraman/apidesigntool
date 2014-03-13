@@ -2,12 +2,6 @@
  * A representation of an ALPS profile
  */
 
-// TODO: I need to adapt this properly to client side js
-//  * how do I allow multiple profiles to be loaded?
-//  * should I keep a global list of descriptors?
-
-//TODO: Do I need to worry about someone calling readJSON more than once?
-
 var ERR_ROOT_MISSING = "the ALPS root property is not defined";
 var ERR_TYPE_MISSING = "the type property is missing for the descriptor named ";
 var ERR_DUPE_ID = "duplicate ID found for descriptor ID ";
@@ -15,7 +9,7 @@ var ERR_DESCRIPTOR_NOT_ARRAY = "the descriptor must be an array";
 var ERR_REF_NOT_FOUND = "a reference to a local descriptor was not found"
 
  var version;
- var descriptors = [];
+ var descriptors = {};
  
  // ALPSObject: an object representing ALPS profile in JSON
  function readJSON(ALPSObject, callback) {
@@ -46,6 +40,51 @@ var ERR_REF_NOT_FOUND = "a reference to a local descriptor was not found"
  	callback(null); 	
  	
  } 
+
+function parseXML(ALPSXMLProfile, callback) {
+    //console.log('in here.');
+    var alpsXml = $.parseXML(ALPSXMLProfile);
+    
+    //console.log(alpsXml);
+    
+    alpsRoot = alpsXml.firstChild;
+    //console.log(alpsRoot.childNodes);
+    
+    
+    
+    for( index in alpsRoot.childNodes ) {
+        if( alpsRoot.childNodes[index].localName === 'descriptor' ) {
+            //console.log('descriptor found');
+            parseXMLDescriptor(alpsRoot.childNodes[index]);
+        }
+    }
+}
+
+function parseXMLDescriptor(descriptor) {
+    
+    for( index in descriptor.childNodes ) {
+        if( descriptor.childNodes[index].localName === 'descriptor' ) {
+            parseXMLDescriptor(descriptor.childNodes[index]);
+        }
+    }
+    
+    var idAttr = descriptor.attributes.getNamedItem("id");
+    var hrefAttr = descriptor.attributes.getNamedItem("href");
+    var typeAttr = descriptor.attributes.getNamedItem("type");    
+
+    var id;
+    
+    if( idAttr != null ) { 
+        id = idAttr.nodeValue;
+    }
+    
+    var aDescriptor = {id: id};
+    //console.log(aDescriptor);
+    if( hrefAttr === null ) {
+        descriptors[id] = aDescriptor;
+    }
+    
+}
  
  function parseDescriptorList(descriptorList) {
 
@@ -68,8 +107,11 @@ var ERR_REF_NOT_FOUND = "a reference to a local descriptor was not found"
  	 	}
  	 	
  	 	// Store the parsed descriptor in our object map
- 	 	descriptors[aDescriptor.id] = aDescriptor;
- 		
+        
+        // For now, only store the descriptor if it doesn't have an href
+        if( !aDescriptor.hasOwnProperty("href") ) {
+            descriptors[aDescriptor.id] = aDescriptor;
+        } 		
  	} 	
  	
  	// dereference any links that we have found during parsing
@@ -86,9 +128,7 @@ var ERR_REF_NOT_FOUND = "a reference to a local descriptor was not found"
 				if( descriptors[localID] === null) {
 					throw new Error(ERR_REF_NOT_FOUND);
 				}
-			}
-			
-			
+			}						
 		}
 		
  	}

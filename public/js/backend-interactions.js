@@ -105,7 +105,7 @@ function deleteNodeOnServer(node, callback) {
 }
 
 function retrieveALPSProfiles( callback ) {    
-    console.log("retrieveALPSProfiles");
+    //console.log("retrieveALPSProfiles");
     $.getJSON('/ALPS/profiles', function (data, textStatus, jqXHR) {
         if (jqXHR.status === 200) {
             
@@ -120,5 +120,36 @@ function retrieveALPSProfiles( callback ) {
             });        
             callback();
         }
+    });
+}
+
+function createALPSProfile( profile, callback ) {    
+    console.log("createALPSProfile");    
+    
+    var data = {profile: profile};
+    
+    console.log(data);
+     var writeTaskAJAX = $.ajax({
+        url: '/ALPS/profiles',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        dataType: 'json'
+    });
+    
+     writeTaskAJAX.done(function(data, textStatus, jqXHR) {    	
+        if( jqXHR.status === 200) {
+        	console.log('success!');
+        	console.log(data);
+
+            if( callback != null ) {
+                profiles.push(profile);
+            	callback();
+            }
+                        
+        }else {
+        	console.log('you got problems');
+        	console.log(jqXHR);
+        }        
     });
 }
