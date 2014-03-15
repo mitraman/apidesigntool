@@ -200,7 +200,7 @@ responseEditor.on("change", function (e) {
         
         if( typeAheadCount > 0 ) {
             // highlight the first suggestion
-            $("#type-ahead-list").children(".type-ahead-suggestion")[0].attr("class", "type-ahead-suggestion-highlight");
+            //$("#type-ahead-list").children(".type-ahead-suggestion")[0].attr("class", "type-ahead-suggestion-highlight");
         }
         
 

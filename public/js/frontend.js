@@ -109,9 +109,10 @@ $("#profile-list").change(function(e) {
     // Load the selected profile in the editor
     var doc = profiles[selectedVal].doc;
     //var docStr = JSON.stringify(doc, null, '\t');
-    ALPSEditor.setValue(doc);
+    ALPSEditor.setValue(doc,1);
     $("#profile-name").val(profiles[selectedVal].name);
     //todo: set the appropriate rep value
+    $("#profile-rep").val(profiles[selectedVal].representation);
     
     
 });
@@ -170,7 +171,7 @@ function selectNode(node) {
 
     ignoreDataChange = true;
     // is this call synchronous?
-    responseEditor.setValue(node.responseData);
+    responseEditor.setValue(node.responseData,1);
     ignoreDataChange = false;
 
     // Make sure that dropdown points to the selected node
@@ -187,15 +188,10 @@ $('#removeNode').click(function () {
         console.log(activeNode);
 
         // Remove the node from the list
-        var nodeMatches = $.grep(nodes, function (node) {
-            return node.nodeId === activeNode.nodeId
-        });
-        
-        console.log(nodeMatches);
-        nodes.splice(nodeMatches[0].index, 1);
+        delete graph.nodes[activeNode.nodeId];        
         
         console.log('delete - drawNodes()');
-        drawNodes();
+        renderGraph();
     });
 });
 
@@ -249,8 +245,25 @@ $('button#saveResponseData').click(function () {
     
     // Look for links
     // TODO: improve regex to match on the title only without including quotes or dollar signs
-    var re = /["][$](?:(?:\\.)|(?:[^"\\]))*?["]/g;
+    //var re = /["][$](?:(?:\\.)|(?:[^"\\]))*?["]/g;
+    var re = /[$][(].*?[)]/g;
     var linkTokens = responseEditor.getSession().getValue().match(re);
+    
+    /*
+    var m;
+    while ((m = re.exec(responseEditor.getSession().getValue())) != null) {
+        if (m.index === regex.lastIndex) {
+        regex.lastIndex++;
+        }
+    // View your result using the m-variable.
+    // eg m[0] etc.
+        
+        
+    }
+    console.log(m);
+    */
+    
+    console.log('linkTokens:' + linkTokens);
 
     console.log("activeNode :" + activeNode);
     
@@ -324,6 +337,7 @@ ALPSEditor.getSession().setMode("ace/mode/json");
 // ** Set editor highlighter based on the content-type once the user enters a value
 $('#mime_type').bind('change', function (event) {
     var value = $('#mime_type').val();
+    console.log(value);
 
     // If we understand the content-type, set the editor accordingly
     if (value.toUpperCase() === 'APPLICATION/JSON') {

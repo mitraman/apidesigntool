@@ -113,7 +113,7 @@
 			</div>
 			<ul class="nav nav-tabs">
   				<li class="active"><a href="#transition" data-toggle="tab">Transition</a></li>
-  				<!-- remove headers until we ipmlement it propery <li><a href="#headers" data-toggle="tab">Headers</a></li> -->
+  				<li><a href="#headers" data-toggle="tab">Headers</a></li> 
   				<li><a href="#response" data-toggle="tab">Body</a></li>
   				
   				
@@ -183,8 +183,14 @@
 						<tr>
 							<td></td>
 							<td><input type="text" readonly="true" value="Content-Type"/></td>
-							<td><input id="mime_type" readonly="true" type="text" placeholder="MIME type" value="application/json"/></td>						
+                            <td><select id="mime_type">
+                                <option value="application/json">application/json</option>
+                                <option value="application/xml">application/xml</option>
+                                <option value="application/hal+json">application/hal+json</option>                                
+                                </select></td>
+							<!--<td><input id="mime_type" readonly="true" type="text" placeholder="MIME type" value="application/json"/></td>-->
 						</tr>
+                        <!--
 						<tr>
 							<td><a href="#" ><i class="icon-remove"></i></a></td>
 							<td><input class="header-key" type="text" placeholder="HTTP Header Name"/></td>
@@ -193,6 +199,7 @@
 						<tr>
 							<td colspan="3"><button class="btn btn-primary" type="button" id="addHeader">Add Header</button></td>
 						</tr>
+                        -->
 					</table>					
 				</div>
 				<div class="tab-pane" id="response">
