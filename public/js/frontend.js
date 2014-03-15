@@ -168,10 +168,10 @@ function selectNode(node) {
         }
     });
 
-    disableTypeAhead = true;
+    ignoreDataChange = true;
     // is this call synchronous?
     responseEditor.setValue(node.responseData);
-    disableTypeAhead = false;
+    ignoreDataChange = false;
 
     // Make sure that dropdown points to the selected node
     $("#select_resource").val(node.nodeId);
@@ -303,16 +303,6 @@ $('button#saveResponseData').click(function () {
     updateNodeOnServer(activeNode);
 });
 
-// **** RESPONSE EDITOR FUNCTIONS ****
-
-var typeAheadEnabled = false;
-var ALPStypeAheadEnabled = false;
-var tokenStartColumn = 0;
-var tokenStartRow = 0;
-
-var disableTypeAhead = false;
-var disableALPSTypeAhead = false;
-
 // Setup ACE Editor
 
 // Set the height of the div for the editor
@@ -397,24 +387,4 @@ $('#table_headers').on("keyup click", function (event) {
         $('#table_headers tr:last').replaceWith(trHTML);
         $('#table_headers tr:last').after("<td colspan=\"3\"><button class=\"btn btn-primary\" type=\"button\" id=\"addHeader\">Add Header</button></td>");
     }
-});
-
-// Event handler functions
-function propertyChange(event) {
-    console.log('change occured');
-    console.log(event);
-
-    // Determine if this is a change we need to act upon
-    if (event.type === "keydown") {
-        // TODO: Make sure this was an input character that we care about
-
-    }
-
-    // FOR FUTURE USE
-}
-
-// Bind event handlers to input objects
-$('#name').bind({
-    keydown: propertyChange,
-    paste: propertyChange
 });
