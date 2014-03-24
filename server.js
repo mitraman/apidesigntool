@@ -12,7 +12,9 @@ app.use('/frontend', express.static('public'));
 //TODO: Add support for XML
 app.use(express.bodyParser());
 
-var conn = mongo.db('rmitra:rmitra@linus.mongohq.com:10091/apiprototypedb');    
+var connUrlString = process.env.MONGO_USERNAME + ":" + process.env.MONGO_PASSWORD + "@" + process.env.MONGO_URL;
+console.log(connUrlString);
+var conn = mongo.db(connUrlString);    
 
 app.get('/', function(req, res){
     res.send('Hello World');
@@ -47,9 +49,10 @@ app.get('/tasks/:id', function(req, res) {
 });
 
 
-app.get('/tasks', function(req, res) {
+app.get('/projects/:projectId/tasks', function(req, res) {
+  var projectId = req.params.projectId;
   
-   conn.collection('tasks').find().toArray(function (err, tasks) {
+   conn.collection('tasks').find({project: projectId}).toArray(function (err, tasks) {
 	   if( err ) {
 		   res.status(500);
 		   res.send("Unable to retrieve data.");
@@ -62,7 +65,7 @@ app.get('/tasks', function(req, res) {
    
 });
 
-app.put('/tasks/:id', function(req, res) {
+app.put('/projects/:projectId/tasks/:id', function(req, res) {
 	// replace an existing task object
 	
 	console.log(req.body);
@@ -76,6 +79,9 @@ app.put('/tasks/:id', function(req, res) {
     var links = task.links;
     var url = task.url;    
     var id = req.params.id;
+    
+    var projectId = req.params.projectId;
+    task["project"] = projectId;
 	
 	console.log(title);
 	
@@ -91,7 +97,7 @@ app.put('/tasks/:id', function(req, res) {
 	
 });
 
-app.post('/tasks', function(req, res){
+app.post('/projects/:projectId/tasks', function(req, res){
     // Store a newly created task object
         
     console.log(req.body);
@@ -105,9 +111,12 @@ app.post('/tasks', function(req, res){
     var id = task.nodeId;
     var methods = task.methods;
     
+    task["project"] = req.params.projectId;
+    
     console.log(id);
     // Store object in database
     if( id === undefined) {
+    	console.log(task);
         conn.collection('tasks').insert(task, function (err, post) {
         console.log('Error: ' + err);
         console.log('Post:' + post);
@@ -175,6 +184,38 @@ app.post('/ALPS/profiles', function(req, res) {
         });    
 });
 
+// Retrieve a list of authorized projects for this user
+app.get('/projects', function(req, res) {
+	
+	conn.collection('projects').find().toArray(function( err, projects ) {
+		res.send(projects); 
+	});
+	
+});
+
+// Create a new project
+app.post('/projects', function(req, res) {
+	var name = req.body.name;
+	var description = req.body.description;
+	var hostname = req.body.hostname;
+	
+	var project = {
+			name : name,
+			description : description,
+			hostname : hostname
+	}
+			
+	conn.collection('projects').insert(project, function (err, post) {
+		if( err === null ) {
+			res.send(200, '{ "status" : "complete" }');
+		}else {
+			res.send(500);
+		}
+	});
+	
+});
+
+
 
 var mockListeners = {};
 
@@ -185,11 +226,26 @@ function registerMockListeners() {
 	mockListeners = {};
 	
 	conn.collection('tasks').find().toArray(function (err, tasks) {
+		
+		conn.collection('projects').find().toArray(function( err, projects ) {
+			
+			// create an object to store project data by ID key
+			var projectMap = {};			
+			for( projectIndex in projects ) {
+				var project = projects[projectIndex];
+				projectMap[project._id] = project;
+			}
+			
 		for( taskIndex in tasks) {			
 			var task = tasks[taskIndex];
+			var projectId = task.project;
+			var project = projectMap[projectId];	
+			console.log('project: ' + project);
 			
-			if( task.url != null && task.url != "" ) {
-				mockListeners[task.url] = {
+			if( task.url != null && task.url != "" && project != undefined ) {
+				var key = project.hostname + "." + task.url;
+				console.log(key);
+				mockListeners[key] = {
 						title : task.title,
 						response : task.response,			
 						methods : task.methods
@@ -197,18 +253,24 @@ function registerMockListeners() {
 			}
 		}
 		
+		});
+		
 	});
 	
 }
 
 // use our mock listeners to handle any remaining requests 
 app.all('*', function(req, res) {
-		
+
+	console.log('in listener handler.');
 	var subdomain = req.host.split(".")[0];
 	console.log(subdomain);
 	
-	if( mockListeners[req.path] != null) {				
-		var listener = mockListeners[req.path];
+	var listenerKey = subdomain + "." + req.path;
+	console.log(listenerKey);
+	
+	if( mockListeners[listenerKey] != null) {				
+		var listener = mockListeners[listenerKey];
 		
 		console.log(listener);
 		

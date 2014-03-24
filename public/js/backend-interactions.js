@@ -1,7 +1,7 @@
 // ****
 // Interactions with the Backend
 
-function createNodeOnServer(title, description, url, methods, responseData, links, callback) {
+function createNodeOnServer(activeProjectId, title, description, url, methods, responseData, links, callback) {
          
      var taskContainer = { task : { title : title, 
                                    description : description, 
@@ -10,9 +10,12 @@ function createNodeOnServer(title, description, url, methods, responseData, link
                                    response : responseData, 
                                    links : links } };
      console.log(taskContainer);
+    
+    var url = '/projects/' + activeProjectId + '/tasks';
+    
    //Write task to the server   
    var writeTaskAJAX = $.ajax({
-        url: '/tasks',
+        url: url,
         type: 'POST',
         contentType: 'application/json',
         data: JSON.stringify(taskContainer),
@@ -48,16 +51,17 @@ function createNodeOnServer(title, description, url, methods, responseData, link
     });
 }
 
-function updateNodeOnServer(node, callback) {
+function updateNodeOnServer(projectId, node, callback) {
      
    console.log('updating it');
    console.log(node);
+    console.log(projectId);
    //Write node to the server   
    
    var taskContainer = { task : { title : node.title, description : node.description, url : node.uri, methods : node.methods, response : node.responseData, links : node.links} };
    console.log(taskContainer);
    
-   var PUTurl = "/tasks/" + node.nodeId;
+   var PUTurl = "/projects/" + projectId + "/tasks/" + node.nodeId;
    
    var writeTaskAJAX = $.ajax({
         url: PUTurl,
@@ -150,6 +154,49 @@ function createALPSProfile( profile, callback ) {
         }else {
         	console.log('you got problems');
         	console.log(jqXHR);
+        }        
+    });
+}
+
+function retrieveProjects(callback) {
+    $.getJSON('/projects', function (data, textStatus, jqXHR) {
+        var projects = []
+        if (jqXHR.status === 200) {
+            
+            $.each(data, function (index, project) {
+                //console.log(project);
+                projects.push(project);                                
+            });        
+            
+            callback(projects);
+        }
+    });
+
+}
+function createProjectOnServer(name, description, hostname, callback) {
+    var project = {name: name, description: description, hostname: hostname};
+    
+    
+     var writeTaskAJAX = $.ajax({
+        url: '/projects',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(project),
+        dataType: 'json'
+    });
+    
+     writeTaskAJAX.done(function(data, textStatus, jqXHR) {    	
+        if( jqXHR.status === 200) {
+        	console.log('success!');
+        	console.log(data);
+
+            if( callback != null ) {                
+            	callback();
+            }
+                        
+        }else {        	
+        	console.log(jqXHR);
+            throw new Error("unable to create project due to server error.");
         }        
     });
 }

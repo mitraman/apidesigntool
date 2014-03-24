@@ -1,13 +1,131 @@
 
 var profiles = [];
+var projects = [];
+var activeProjectId;
 var activeNode = null;
 
+/*** Initial Routines *******/
 // Hide the non-active panes
 $("#ALPS-pane").hide();
 
+/*** End of Initial Routines *******/
+
+// Load the list of projects available for this user
+retrieveProjects(function( projectList ) {    
+    projects = projectList;
+    
+    if( projects.length > 0 ) {
+        activeProjectId = projects[0]._id;
+        createProjectMenu();
+    }    
+    
+    loadTasks();
+    
+});
+
+function loadProjectPage(name) {
+    var hostName = window.location.host;
+    var protocol = window.location.protocol;
+    
+    var rawHostName = hostName.substring(hostName.indexOf('.')+1);    
+    
+    if( hostName.indexOf('www') === 0 ) {
+        rawHostName = rawHostName.substring(rawHostName.indexOf('.')+1);    
+        name = 'www.' + name;
+    }
+
+    var newUrl = protocol + '//' + name + '.' + rawHostName + window.location.pathname;
+    window.location.href= newUrl;
+}
+
+// Create new project
+$('#create-project-save').click(function () {
+    
+    console.log("create-project-save");
+
+    var name = $('#create-project-name').val();
+    var description = $('#create-project-description').val();
+    var hostname = $('#create-project-hostname').val();
+
+    createProjectOnServer(name, description, hostname);
+    
+    
+
+});
+
+function createProjectMenu() {    
+    
+    console.log('createProjectMenu()');
+        
+    $("#project-dropdown").empty();
+    
+    // Find the active project based on the domain name of this page
+    var projectDomainName = window.location.host.split('.')[0];
+    if( projectDomainName === 'www' ) { projectDomainName = window.location.host.split('.')[1] ; }
+    console.log(projectDomainName);
+            
+    for( projectIndex in projects ) { 
+        //console.log(projects[projectIndex]);
+        if( projects[projectIndex].hostname === projectDomainName ) {
+            activeProjectId = projects[projectIndex]._id;
+            $("#project-name").html(projects[projectIndex].name + ' <b class="caret"></b>');                
+        }else {
+            $("#project-dropdown").append('<li><a href="#" class="project-name" data-project-id="' + projects[projectIndex]._id + '">' + projects[projectIndex].name + '</a></li>');
+        }
+    }
+    
+    
+    if( activeProjectId === undefined || activeProjectId === null ) {
+        throw Error( 'no project found' );
+    }
+    
+    
+    $("#project-dropdown").append('<li class="divider"></li>');
+    $("#project-dropdown").append('<li><a href="#create-project" data-toggle="modal">New project</a></li>');
+        
+        
+    $('.project-name').click(function( e ) {
+        var a = $(e.target);
+        var projectId = a.attr('data-project-id');
+        activeProjectId = projectId;
+            
+        // find this project and reload the page with the appropriate subdomain
+        for( index in projects ) {
+            if( projects[index]._id === activeProjectId ) {
+                loadProjectPage(projects[index].hostname);
+            }
+        }
+            
+    });
+        
+    
+}
+
+function clearFormProperties() {
+    // Clear the property sheet
+    $('#name').val('');
+    $('#description').val('');
+    $('#uri').val('');
+    responseEditor.getSession().setValue('');
+    $('#select_resource').find('option').remove();
+    $('#select_resource').append("<option value=\"\"></option>");
+    $(".chzn-select").chosen();
+}
+
 //TODO: this should be move to backend-interactions.js
 // Retrieve a list of tasks
-$.getJSON('/tasks', function (data, textStatus, jqXHR) {
+
+function loadTasks() {
+    var url = "/projects/" + activeProjectId + "/tasks";
+    console.log(url);
+    
+    // Empty the node list
+    graph.nodes = {};
+    
+    // clear the form values
+    clearFormProperties();
+    
+$.getJSON(url, function (data, textStatus, jqXHR) {
 
     if (jqXHR.status === 200) {
 
@@ -55,6 +173,7 @@ $.getJSON('/tasks', function (data, textStatus, jqXHR) {
     }
 
 });
+}
 
 // Load ALPS profiles
 retrieveALPSProfiles(function(error) {
@@ -81,10 +200,13 @@ retrieveALPSProfiles(function(error) {
 
 // user has selected the ALPS pane
 $("#ALPS").click(function(e) {    
+    window.location.hash='alps';
+    console.log(window.location.hash);
     $("#ALPS-pane").show();
     $("#property-editor").hide();            
     $("#ALPS").parent("li").siblings().attr("class","");
-    $("#ALPS").parent("li").attr("class", "active");
+    $("#ALPS").parent("li").attr("class", "active");    
+    return false;
 });
 
 $("#Editor").click(function(e) {
@@ -92,6 +214,8 @@ $("#Editor").click(function(e) {
     $("#property-editor").show();
     $("#Editor").parent("li").siblings().attr("class","");
     $("#Editor").parent("li").attr("class", "active");
+    window.location.hash='editor';
+    return false;
 });
 
 // ** dropdown selection handler
@@ -209,7 +333,7 @@ $('#create-node-save').click(function () {
     var methods = ["GET"];
     var responseData = "";
 
-    var nodeId = createNodeOnServer(title, description, url, methods, responseData, links, newNodeCreated);
+    var nodeId = createNodeOnServer(activeProjectId, title, description, url, methods, responseData, links, newNodeCreated);
 
 });
 
@@ -238,6 +362,9 @@ function newNodeCreated(nodeId) {
     $('#create-node').modal('hide')
 
 }
+
+
+
 
 // Save changes made in the property editor to the backend
 $('button#saveResponseData').click(function () {
@@ -311,9 +438,11 @@ $('button#saveResponseData').click(function () {
     activeNode.methods = methodList;
 
     renderGraph();
+    
+    console.log('activeProjectId: ' + activeProjectId);
 
     // Save data to backend
-    updateNodeOnServer(activeNode);
+    updateNodeOnServer(activeProjectId, activeNode);
 });
 
 // Setup ACE Editor
